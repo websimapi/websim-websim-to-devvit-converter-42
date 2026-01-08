@@ -78,6 +78,31 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
                     }
                 }
             },
+            CallExpression: (node) => {
+                // CSP Fix: Block eval()
+                if (node.callee.type === 'Identifier' && node.callee.name === 'eval') {
+                    magic.overwrite(node.start, node.end, '(console.warn("eval() blocked by CSP"), undefined)');
+                    hasChanges = true;
+                    return;
+                }
+                // CSP Fix: Block window.eval()
+                if (node.callee.type === 'MemberExpression' && 
+                    node.callee.property.type === 'Identifier' && 
+                    node.callee.property.name === 'eval' &&
+                    (node.callee.object.name === 'window' || node.callee.object.type === 'ThisExpression')) {
+                     magic.overwrite(node.start, node.end, '(console.warn("window.eval() blocked by CSP"), undefined)');
+                     hasChanges = true;
+                     return;
+                }
+                // CSP Fix: Block setTimeout/setInterval with string arguments
+                if ((node.callee.name === 'setTimeout' || node.callee.name === 'setInterval') && node.arguments.length > 0) {
+                    const firstArg = node.arguments[0];
+                    if (firstArg.type === 'Literal' && typeof firstArg.value === 'string') {
+                         magic.overwrite(firstArg.start, firstArg.end, 'function(){ console.warn("String-based timeout blocked by CSP"); }');
+                         hasChanges = true;
+                    }
+                }
+            },
             Literal: rewritePaths,
             TemplateLiteral: (node) => {
                 // Smart Swap: Detect Avatar URLs
@@ -148,6 +173,18 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
                     hasChanges = true;
                 }
             }
+        }
+
+        // Regex Fallback for CSP violations (if AST parsing failed)
+        // Note: This is less precise but necessary for broken/complex code
+        const evalRegex = /\beval\s*\(/g;
+        while ((match = evalRegex.exec(originalCode)) !== null) {
+            // We can't safely replace the whole expression with regex, 
+            // but we can break the name 'eval' to 'console.warn' to prevent the call
+            // This leaves the parentheses and arguments: console.warn(...)
+            // It might print the code instead of executing it, which is safe.
+            magic.overwrite(match.index, match.index + 4, 'console.warn');
+            hasChanges = true;
         }
     }
 

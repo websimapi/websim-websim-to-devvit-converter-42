@@ -150,6 +150,8 @@ export default defineConfig({
     "process.platform": JSON.stringify("browser"),
     // Remotion specific flags if needed
     "process.env.REMOTION_ENV": JSON.stringify("production"),
+    // Prevent libraries from using "new Function('return this')" for global detection
+    "global": "globalThis",
   },
   optimizeDeps: {
     include: [${hasReact ? "'react', 'react-dom', 'react/jsx-runtime'" : ""}, ${hasRemotion ? "'remotion', '@remotion/player'" : ""}]
