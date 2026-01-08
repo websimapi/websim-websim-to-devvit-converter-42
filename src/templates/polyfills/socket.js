@@ -67,6 +67,9 @@ export const websimSocketPolyfill = `
                 
             } catch(e) {
                 console.error("[WebSim] Realtime connection failed", e);
+                if (e.name === 'ReferenceError' && e.message.includes('require')) {
+                    console.error("[WebSim] This error is usually caused by a dependency using CommonJS 'require' which is not supported in the browser. Check vite.config.ts commonjsOptions.");
+                }
             }
         }
 

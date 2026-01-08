@@ -121,7 +121,7 @@ export default defineConfig({
     // Increase the chunk size warning limit to 1000 KB to reduce noise
     chunkSizeWarningLimit: 1000,
     commonjsOptions: {
-      ignore: ['@protobufjs/inquire']
+      transformMixedEsModules: true,
     },
     rollupOptions: {
       ${Object.keys(inputs).length > 0 ? `input: ${JSON.stringify(inputs)},` : ''}
