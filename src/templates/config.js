@@ -99,7 +99,8 @@ export default defineConfig({
       'react/jsx-dev-runtime': '/jsx-dev-proxy.js',
       'react/jsx-runtime': 'react/jsx-runtime',
       'remotion': 'remotion',
-      'websim': '/websim_package.js'
+      'websim': '/websim_package.js',
+      '@protobufjs/inquire': './protobuf-inquire-stub.js'
     },
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds
@@ -119,6 +120,9 @@ export default defineConfig({
     sourcemap: false, // Fix: Disable source maps to ensure CSP compliance (no eval)
     // Increase the chunk size warning limit to 1000 KB to reduce noise
     chunkSizeWarningLimit: 1000,
+    commonjsOptions: {
+      ignore: ['@protobufjs/inquire']
+    },
     rollupOptions: {
       ${Object.keys(inputs).length > 0 ? `input: ${JSON.stringify(inputs)},` : ''}
       output: {
