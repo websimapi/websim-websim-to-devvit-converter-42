@@ -7,7 +7,8 @@ import {
     context, 
     getServerPort, 
     redis, 
-    reddit 
+    reddit,
+    realtime
 } from '@devvit/web/server';
 
 const app = express();
@@ -213,6 +214,83 @@ router.get('/api/json/:key', async (req, res) => {
         console.error('JSON Load Error:', e);
         res.status(500).json({ error: e.message });
     }
+});
+
+// --- Realtime / Multiplayer Routes ---
+router.get('/api/realtime/init', async (_req, res) => {
+    try {
+        const presence = await redis.hGetAll('room:default:presence');
+        const roomState = await redis.hGetAll('room:default:state');
+        
+        // Parse JSON values
+        const parsedPresence = {};
+        for (const [k, v] of Object.entries(presence)) parsedPresence[k] = JSON.parse(v);
+        
+        const parsedState = {};
+        for (const [k, v] of Object.entries(roomState)) parsedState[k] = JSON.parse(v);
+
+        res.json({ presence: parsedPresence, roomState: parsedState });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/api/realtime/update-presence', async (req, res) => {
+    const { clientId, data, user } = req.body;
+    if (!clientId) return res.status(400).json({error: 'Missing clientId'});
+
+    // Save to Redis (with user info for peers list)
+    const presenceData = { ...data, _user: user, _lastSeen: Date.now() };
+    await redis.hSet('room:default:presence', { [clientId]: JSON.stringify(presenceData) });
+    
+    // Broadcast
+    await realtime.send('default', {
+        type: 'presence',
+        clientId,
+        data: presenceData
+    });
+    
+    res.json({ ok: true });
+});
+
+router.post('/api/realtime/update-room-state', async (req, res) => {
+    const { data } = req.body;
+    
+    // Merge/Save to Redis
+    const updates = {};
+    for (const [k, v] of Object.entries(data)) {
+        updates[k] = JSON.stringify(v);
+    }
+    await redis.hSet('room:default:state', updates);
+
+    // Broadcast partial update
+    await realtime.send('default', {
+        type: 'roomState',
+        data
+    });
+    
+    res.json({ ok: true });
+});
+
+router.post('/api/realtime/send', async (req, res) => {
+    const { event, clientId } = req.body;
+    await realtime.send('default', {
+        type: 'event',
+        from: clientId,
+        event
+    });
+    res.json({ ok: true });
+});
+
+router.post('/api/realtime/request-update', async (req, res) => {
+    const { targetId, update, from } = req.body;
+    await realtime.send('default', {
+        type: 'presenceRequest',
+        targetId,
+        update,
+        from
+    });
+    res.json({ ok: true });
 });
 
 // --- Internal Routes (Menu/Triggers) ---

@@ -50,6 +50,7 @@ export const generateDevvitJson = (slug, entrypoints) => JSON.stringify({
     "entry": "index.cjs"
   },
   "permissions": {
+    "realtime": true,
     "redis": true,
     "reddit": {
       "enable": true,
