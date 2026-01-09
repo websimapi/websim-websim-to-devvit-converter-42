@@ -99,7 +99,9 @@ export default defineConfig({
       'react/jsx-dev-runtime': '/jsx-dev-proxy.js',
       'react/jsx-runtime': 'react/jsx-runtime',
       'remotion': 'remotion',
-      'websim': '/websim_package.js'
+      'websim': '/websim_package.js',
+      // Fix for CSP: Force protobufjs to use minimal build (no eval/code-gen)
+      'protobufjs': 'protobufjs/dist/minimal.js',
     },
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds
@@ -153,6 +155,7 @@ export default defineConfig({
     // Hardcode production environment to prevent libs from taking dev paths
     "process.env.NODE_ENV": JSON.stringify("production"),
     "process.platform": JSON.stringify("browser"),
+    "global": "globalThis", // Polyfill global to avoid eval-based detection in older libs
     // Remotion specific flags if needed
     "process.env.REMOTION_ENV": JSON.stringify("production"),
   },

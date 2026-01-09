@@ -276,8 +276,13 @@ export const websimSocketPolyfill = `
                 // Dynamic import to avoid build-time issues with concatenator
                 const { connectRealtime } = await import('@devvit/web/client');
                 
+                // Ensure channel name is valid (letters, numbers, underscores only)
+                // Fixes issues where server or fallback might send invalid chars like hyphens
+                let channel = data.channel || 'room_default';
+                channel = channel.replace(/[^a-zA-Z0-9_]/g, '_');
+
                 this.socket = connectRealtime({
-                    channel: data.channel || 'room_default',
+                    channel: channel,
                     onMessage: (msg) => this._handleMessage(msg)
                 });
                 
