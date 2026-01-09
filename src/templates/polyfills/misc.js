@@ -167,35 +167,18 @@ export const avatarInjector = `
                 get: descriptor.get,
                 set: function(value) {
                     let newVal = value;
-                    let skipSet = false;
-
-                    // 1. Intercept WebSim Avatar URLs
                     if (typeof newVal === 'string' && (newVal.includes('images.websim.ai/avatar/') || newVal.includes('images.websim.com/avatar/'))) {
                         try {
                             const parts = newVal.split('/avatar/');
                             if (parts.length > 1) {
                                 const username = parts[1].split(/[?#]/)[0];
-                                
-                                // Optimization: If we already have the resolved Reddit URL for this user, 
-                                // and the element currently has it, ignore this assignment.
-                                // This prevents game loops from overwriting the resolved URL back to the WebSim URL.
-                                const resolvedUrl = CACHE.get(username);
-                                const currentSrc = this.getAttribute('src') || this.src;
-                                
-                                if (resolvedUrl && currentSrc === resolvedUrl) {
-                                    skipSet = true;
-                                } else {
-                                    newVal = PLACEHOLDER_PREFIX + username;
-                                }
+                                newVal = PLACEHOLDER_PREFIX + username;
                             }
                         } catch(e) {}
                     }
-
-                    if (!skipSet) {
-                        originalSet.call(this, newVal);
-                        if (newVal && typeof newVal === 'string' && newVal.includes(PLACEHOLDER_PREFIX)) {
-                            check(this);
-                        }
+                    originalSet.call(this, newVal);
+                    if (newVal && typeof newVal === 'string' && newVal.includes(PLACEHOLDER_PREFIX)) {
+                        check(this);
                     }
                 }
             });

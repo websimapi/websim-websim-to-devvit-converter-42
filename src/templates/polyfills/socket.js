@@ -281,10 +281,7 @@ export const websimSocketPolyfill = `
                     onMessage: (msg) => this._handleMessage(msg)
                 });
                 
-                // Safety check for socket interface and subscription
-                if (this.socket && typeof this.socket.subscribe === 'function') {
-                    this.socket.subscribe();
-                }
+                // this.socket.subscribe(); // Implicit in Devvit Web Client
                 this.connected = true;
 
                 // Start Throttle Loop (100ms)
