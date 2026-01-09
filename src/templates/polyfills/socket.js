@@ -270,7 +270,7 @@ export const websimSocketPolyfill = `
                 // Construct peers list from presence
                 this._updatePeers();
                 
-                console.log(`[WebSim] Connected as ${this.clientId} (${this._currentUser.username})`);
+                console.log(\`[WebSim] Connected as \${this.clientId} (\${this._currentUser.username})\`);
                 
                 // 2. Connect to Devvit Realtime
                 // Dynamic import to avoid build-time issues with concatenator

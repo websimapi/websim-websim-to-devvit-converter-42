@@ -150,6 +150,8 @@ export async function processAssets(assetList, projectId, version) {
                 url = `https://${projectId}.c.websim.com/${encodeURIComponent(filename)}?v=${version}&t=${ts}`;
                 console.log(`[WebSimAPI] ${path} -> Synthesized CDN URL: ${url}`);
             }
+        } else if (!url && !isText) {
+            console.warn(`[WebSimAPI] URL Synthesis Skipped for ${path}. Project: ${projectId}, Version: ${version}`);
         }
         
         // Legacy fallback: try metadata endpoint only if we still failed to get a URL
