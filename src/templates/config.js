@@ -93,16 +93,17 @@ export default defineConfig({
     }),` : ''}
   ],
   resolve: {
-    alias: {
+    alias: [
       // CRITICAL: Remotion and some React libs might try to import jsx-dev-runtime in 'dev' mode.
       // We alias to a local proxy that implements jsxDEV using the production jsx runtime.
-      'react/jsx-dev-runtime': '/jsx-dev-proxy.js',
-      'react/jsx-runtime': 'react/jsx-runtime',
-      'remotion': 'remotion',
-      'websim': '/websim_package.js',
+      { find: 'react/jsx-dev-runtime', replacement: '/jsx-dev-proxy.js' },
+      { find: 'react/jsx-runtime', replacement: 'react/jsx-runtime' },
+      { find: 'remotion', replacement: 'remotion' },
+      { find: 'websim', replacement: '/websim_package.js' },
       // Fix for CSP: Force protobufjs to use minimal build (no eval/code-gen)
-      'protobufjs': 'protobufjs/dist/minimal.js',
-    },
+      // Use exact match to avoid breaking imports like 'protobufjs/minimal' which devvit protos use
+      { find: /^protobufjs$/, replacement: 'protobufjs/dist/minimal.js' },
+    ],
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds
     mainFields: ['browser', 'module', 'main'],
