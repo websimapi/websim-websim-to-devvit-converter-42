@@ -107,8 +107,9 @@ export default defineConfig({
       { find: 'remotion', replacement: 'remotion' },
       { find: 'websim', replacement: '/websim_package.js' },
       // Fix for CSP: Force protobufjs to use minimal build (no eval/code-gen)
-      { find: 'protobufjs/minimal', replacement: 'protobufjs/dist/minimal.js' },
-      { find: 'protobufjs', replacement: 'protobufjs/dist/minimal.js' },
+      // Use regex to prevent incorrect path concatenation (e.g. protobufjs/minimal -> protobufjs/dist/minimal.js/minimal)
+      { find: /^protobufjs$/, replacement: 'protobufjs/dist/minimal.js' },
+      { find: /^protobufjs\/minimal$/, replacement: 'protobufjs/dist/minimal.js' },
     ],
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds

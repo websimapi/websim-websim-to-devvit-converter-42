@@ -166,11 +166,8 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
 
     } catch (e) {
         // Regex Fallback for JSX or syntax errors (Acorn fails on JSX)
-        // Matches:
-        // 1. import ... from "..."
-        // 2. import "..."
-        // 3. export ... from "..."
-        // 4. import("...") (dynamic)
+        
+        // 1. Rewrite Imports via Regex
         const importRegex = /(import\s+(?:[\w\s{},*]+)\s+from\s+['"])([^'"]+)(['"])|(import\s+['"])([^'"]+)(['"])|(from\s+['"])([^'"]+)(['"])|(import\s*\(\s*['"])([^'"]+)(['"]\s*\))/g;
         let match;
         const originalCode = code; 
@@ -188,6 +185,34 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
                     hasChanges = true;
                 }
             }
+        }
+
+        // 2. Regex Fallback for Auto-Exports (if parsing failed)
+        // This is critical for files with JSX where Acorn fails but we still need to export top-level helpers
+        // Attempt to find top-level function/class/variable declarations
+        const declRegex = /^(?:export\s+)?(?:async\s+)?(function|class|const|let|var)\s+([a-zA-Z0-9_$]+)/gm;
+        let declMatch;
+        const fallbackDeclared = new Set();
+        // Reset lastIndex
+        declRegex.lastIndex = 0;
+        
+        while ((declMatch = declRegex.exec(code)) !== null) {
+            // declMatch[2] is the identifier
+            fallbackDeclared.add(declMatch[2]);
+        }
+
+        const safeExports = [];
+        fallbackDeclared.forEach(name => {
+             // Avoid double export if it's already exported in source
+             const checkExport = new RegExp(`export\\s+(?:async\\s+)?(?:function|class|const|let|var)\\s+${name}`, 'm');
+             if (!checkExport.test(code)) {
+                 safeExports.push(name);
+             }
+        });
+
+        if (safeExports.length > 0) {
+            magic.append(`\n\n// [WebSim] Auto-exported definitions (Regex Fallback)\nexport { ${safeExports.join(', ')} };`);
+            hasChanges = true;
         }
     }
 
