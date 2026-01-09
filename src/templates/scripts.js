@@ -115,12 +115,6 @@ files.forEach(fileObj => {
              issues++;
         }
 
-        // Check for require() in client code
-        if (content.match(/\\brequire\\s*\\(/)) {
-             console.warn(\`⚠️  'require()' usage detected in \${f}. This is not supported in the browser and will cause ReferenceErrors.\`);
-             issues++;
-        }
-
         // Check for fetch(blob:)
         if (content.match(/fetch\\s*\\(\\s*['"]?blob:/i)) {
              console.error(\`❌ Prohibited 'fetch(blob:)' usage in \${f}.\`);

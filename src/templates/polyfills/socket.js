@@ -1,8 +1,10 @@
 export const websimSocketPolyfill = `
+import { connectRealtime } from '@devvit/web/client';
+
 // [WebSim] Realtime Multiplayer Polyfill (Devvit Adapter)
-(function() {
-    window.WebsimSocket = class WebsimSocket {
-        constructor() {
+// Removed IIFE to allow top-level imports for better bundling
+window.WebsimSocket = class WebsimSocket {
+    constructor() {
             this.presence = {};
             this.roomState = {};
             this.peers = {}; // Peers map: clientId -> UserData
@@ -52,9 +54,7 @@ export const websimSocketPolyfill = `
 
             // 3. Connect Realtime
             try {
-                // Dynamic import of Devvit Client SDK
-                const { connectRealtime } = await import('@devvit/web/client');
-                
+                // Static import used at top level now
                 this.ws = await connectRealtime({
                     channel: 'default', // Single global channel for now
                     onMessage: (msg) => this._handleMessage(msg),
@@ -67,9 +67,6 @@ export const websimSocketPolyfill = `
                 
             } catch(e) {
                 console.error("[WebSim] Realtime connection failed", e);
-                if (e.name === 'ReferenceError' && e.message.includes('require')) {
-                    console.error("[WebSim] This error is usually caused by a dependency using CommonJS 'require' which is not supported in the browser. Check vite.config.ts commonjsOptions.");
-                }
             }
         }
 
@@ -214,6 +211,4 @@ export const websimSocketPolyfill = `
     
     // Some apps might look for window.websimSocketInstance
     window.websimSocketInstance = window.party;
-
-})();
 `;

@@ -121,7 +121,7 @@ export default defineConfig({
     // Increase the chunk size warning limit to 1000 KB to reduce noise
     chunkSizeWarningLimit: 1000,
     commonjsOptions: {
-      transformMixedEsModules: true,
+      ignore: ['@protobufjs/inquire']
     },
     rollupOptions: {
       ${Object.keys(inputs).length > 0 ? `input: ${JSON.stringify(inputs)},` : ''}
@@ -158,7 +158,11 @@ export default defineConfig({
     "global": "globalThis",
   },
   optimizeDeps: {
-    include: [${hasReact ? "'react', 'react-dom', 'react/jsx-runtime'" : ""}, ${hasRemotion ? "'remotion', '@remotion/player'" : ""}]
+    include: [
+        '@devvit/web/client',
+        ${hasReact ? "'react', 'react-dom', 'react/jsx-runtime'" : ""}, 
+        ${hasRemotion ? "'remotion', '@remotion/player'" : ""}
+    ].filter(Boolean)
   }
 });
 `;
