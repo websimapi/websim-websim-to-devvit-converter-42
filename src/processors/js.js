@@ -29,9 +29,40 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
     const magic = new MagicString(code);
     let hasChanges = false;
 
+    // Track definitions for auto-exporting (Legacy Script -> Module support)
+    const declaredNames = new Set();
+    const exportedNames = new Set();
+
     try {
         ast = acorn.parse(code, { sourceType: 'module', ecmaVersion: 'latest', allowReturnOutsideFunction: true, allowHashBang: true });
         
+        // Pass 1: Collect definitions and exports
+        if (ast.body) {
+            for (const node of ast.body) {
+                if (node.type === 'FunctionDeclaration' && node.id) {
+                    declaredNames.add(node.id.name);
+                } else if (node.type === 'ClassDeclaration' && node.id) {
+                    declaredNames.add(node.id.name);
+                } else if (node.type === 'VariableDeclaration') {
+                    for (const decl of node.declarations) {
+                        if (decl.id.type === 'Identifier') declaredNames.add(decl.id.name);
+                    }
+                } else if (node.type === 'ExportNamedDeclaration') {
+                    if (node.declaration) {
+                        if (node.declaration.id) exportedNames.add(node.declaration.id.name);
+                        else if (node.declaration.declarations) {
+                            node.declaration.declarations.forEach(d => exportedNames.add(d.id.name));
+                        }
+                    }
+                    if (node.specifiers) {
+                        node.specifiers.forEach(s => exportedNames.add(s.exported.name));
+                    }
+                } else if (node.type === 'ExportDefaultDeclaration') {
+                    exportedNames.add('default');
+                }
+            }
+        }
+
         const rewrite = (node) => {
             if (node.source && node.source.value) {
                 const newVal = normalizeImport(node.source.value, analyzer.dependencies);
@@ -123,6 +154,15 @@ export function processJS(jsContent, filename = 'script.js', analyzer) {
                 }
             }
         });
+
+        // Pass 2: Auto-Export top-level definitions if not already exported
+        // This fixes "X is not exported by Y" errors when converting legacy scripts to modules
+        const toExport = [...declaredNames].filter(name => !exportedNames.has(name));
+        if (toExport.length > 0) {
+            // Append exports at the end
+            magic.append(`\n\n// [WebSim] Auto-exported definitions for module compatibility\nexport { ${toExport.join(', ')} };`);
+            hasChanges = true;
+        }
 
     } catch (e) {
         // Regex Fallback for JSX or syntax errors (Acorn fails on JSX)
