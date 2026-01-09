@@ -277,11 +277,14 @@ export const websimSocketPolyfill = `
                 const { connectRealtime } = await import('@devvit/web/client');
                 
                 this.socket = connectRealtime({
-                    channel: data.channel || 'room-default',
+                    channel: data.channel || 'room_default',
                     onMessage: (msg) => this._handleMessage(msg)
                 });
                 
-                this.socket.subscribe();
+                // Safety check for socket interface and subscription
+                if (this.socket && typeof this.socket.subscribe === 'function') {
+                    this.socket.subscribe();
+                }
                 this.connected = true;
 
                 // Start Throttle Loop (100ms)

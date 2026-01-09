@@ -81,7 +81,7 @@ async function fetchAllData() {
 
 // --- Realtime & Multiplayer Endpoints ---
 
-const ROOM_CHANNEL = 'room-default';
+const ROOM_CHANNEL = 'room_default';
 const KEY_ROOM_STATE = 'room:state';
 const KEY_PRESENCE = 'room:presence';
 

@@ -114,10 +114,9 @@ export default defineConfig({
   build: {
     outDir: '../../dist/client',
     emptyOutDir: true,
-    target: 'es2020',
+    target: 'es2022', // Modern target avoids legacy polyfills using eval
     minify: 'esbuild',
-    sourcemap: false, // Fix: Disable source maps to ensure CSP compliance (no eval)
-    // Increase the chunk size warning limit to 1000 KB to reduce noise
+    sourcemap: false, // Critical: Disable source maps to ensure CSP compliance (no eval)
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       ${Object.keys(inputs).length > 0 ? `input: ${JSON.stringify(inputs)},` : ''}
