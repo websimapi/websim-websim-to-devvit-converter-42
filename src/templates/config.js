@@ -47,7 +47,7 @@ export const generateDevvitJson = (slug, entrypoints) => JSON.stringify({
     }
   },
   "server": {
-    "entry": "index.cjs"
+    "entry": "dist/server/index.cjs"
   },
   "permissions": {
     "redis": true,
@@ -75,6 +75,11 @@ export const generateDevvitJson = (slug, entrypoints) => JSON.stringify({
 export const generateClientViteConfig = ({ hasReact = false, hasRemotion = false, inputs = {} } = {}) => `
 import { defineConfig } from 'vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 ${hasReact ? "import react from '@vitejs/plugin-react';" : ""}
 
 export default defineConfig({
@@ -103,7 +108,7 @@ export default defineConfig({
       { find: 'websim', replacement: '/websim_package.js' },
       // Fix for CSP: Force protobufjs to use minimal build (no eval/code-gen)
       // We resolve to the absolute path to ensure Vite uses exactly this file
-      { find: 'protobufjs', replacement: path.resolve(__dirname, '../../node_modules/protobufjs/dist/minimal.js') },
+      { find: /^protobufjs$/, replacement: path.resolve(__dirname, '../../node_modules/protobufjs/dist/minimal.js') },
     ],
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds
@@ -207,11 +212,6 @@ export default defineConfig({
         format: 'cjs',
         entryFileNames: 'index.cjs',
         inlineDynamicImports: true,
-      },
-      onwarn(warning, warn) {
-        // Suppress "Use of eval" warning from protobufjs/inquire which is common in devvit/google protos
-        if (warning.code === 'EVAL' && warning.id.includes('protobufjs')) return;
-        warn(warning);
       },
     },
   },

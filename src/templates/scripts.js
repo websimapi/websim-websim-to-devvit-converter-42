@@ -216,8 +216,8 @@ try {
     // Verify Config
     if (fs.existsSync('devvit.json')) {
         const config = fs.readFileSync('devvit.json', 'utf8');
-        if (!config.includes('"entry": "index.cjs"')) {
-             console.warn('⚠️  devvit.json might have incorrect server entry path (expected "index.cjs").');
+        if (!config.includes('"entry": "dist/server/index.cjs"')) {
+             console.warn('⚠️  devvit.json might have incorrect server entry path (expected "dist/server/index.cjs").');
         }
     } else {
         console.warn('⚠️  devvit.json not found. This might cause upload failure.');
