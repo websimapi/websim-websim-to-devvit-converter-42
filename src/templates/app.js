@@ -81,7 +81,7 @@ async function fetchAllData() {
 
 // --- Realtime & Multiplayer Endpoints ---
 
-const ROOM_CHANNEL = 'room_default';
+const ROOM_CHANNEL = 'room_default'; // Note: Must match regex [a-zA-Z0-9_]+
 const KEY_ROOM_STATE = 'room:state';
 const KEY_PRESENCE = 'room:presence';
 
@@ -144,7 +144,13 @@ router.post('/api/realtime/update-room', async (req, res) => {
             else current[k] = v;
         }
 
-        await redis.set(KEY_ROOM_STATE, JSON.stringify(current));
+        // Limit room state size to prevent Redis issues
+        const jsonStr = JSON.stringify(current);
+        if (jsonStr.length > 10000) {
+             // If too large, we might reject or trim, but for now just warn
+             console.warn('Room state large:', jsonStr.length);
+        }
+        await redis.set(KEY_ROOM_STATE, jsonStr);
         
         // Broadcast
         await realtime.send(ROOM_CHANNEL, {

@@ -286,7 +286,7 @@ export const websimSocketPolyfill = `
                     onMessage: (msg) => this._handleMessage(msg)
                 });
                 
-                // this.socket.subscribe(); // Implicit in Devvit Web Client
+                // Note: subscription is automatic with onMessage in recent Devvit clients
                 this.connected = true;
 
                 // Start Throttle Loop (100ms)

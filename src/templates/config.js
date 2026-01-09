@@ -74,6 +74,7 @@ export const generateDevvitJson = (slug, entrypoints) => JSON.stringify({
 
 export const generateClientViteConfig = ({ hasReact = false, hasRemotion = false, inputs = {} } = {}) => `
 import { defineConfig } from 'vite';
+import path from 'path';
 ${hasReact ? "import react from '@vitejs/plugin-react';" : ""}
 
 export default defineConfig({
@@ -101,8 +102,8 @@ export default defineConfig({
       { find: 'remotion', replacement: 'remotion' },
       { find: 'websim', replacement: '/websim_package.js' },
       // Fix for CSP: Force protobufjs to use minimal build (no eval/code-gen)
-      // Use exact match to avoid breaking imports like 'protobufjs/minimal' which devvit protos use
-      { find: /^protobufjs$/, replacement: 'protobufjs/dist/minimal.js' },
+      // We resolve to the absolute path to ensure Vite uses exactly this file
+      { find: 'protobufjs', replacement: path.resolve(__dirname, '../../node_modules/protobufjs/dist/minimal.js') },
     ],
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds

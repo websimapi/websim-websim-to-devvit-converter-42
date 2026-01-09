@@ -110,7 +110,9 @@ files.forEach(fileObj => {
         }
 
         // Check for eval()
+        // Note: We use a simple check, which might flag comments or strings.
         if (content.includes('eval(')) {
+             // Try to filter out comments/strings if possible, but basic warning is safer
              console.warn(\`⚠️  Dangerous 'eval()' usage detected in \${f}. This will likely be blocked by CSP.\`);
              issues++;
         }
