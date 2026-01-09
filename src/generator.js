@@ -15,7 +15,6 @@ import {
     webAudioPolyfill,
     websimSocketPolyfill,
     websimStubsJs,
-    protobufInquireStub,
     websimPackageJs,
     jsxDevProxy,
     avatarInjector,
@@ -314,7 +313,6 @@ export default {
 
     const combinedPolyfills = [shimCode, simpleLoggerJs, webAudioPolyfill, websimSocketPolyfill, websimStubsJs, avatarInjector].join('\n\n');
     clientFolder.file("websim_polyfills.js", combinedPolyfills);
-    clientFolder.file("protobuf-inquire-stub.js", protobufInquireStub);
     clientFolder.file("websim_package.js", websimPackageJs);
     clientFolder.file("jsx-dev-proxy.js", jsxDevProxy);
 

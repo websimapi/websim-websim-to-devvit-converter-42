@@ -79,6 +79,149 @@ async function fetchAllData() {
 // --- API Routes (Client -> Server) ---
 // Note: All client-callable endpoints must start with /api/
 
+// --- Realtime & Multiplayer Endpoints ---
+
+const ROOM_CHANNEL = 'room-default';
+const KEY_ROOM_STATE = 'room:state';
+const KEY_PRESENCE = 'room:presence';
+
+// Helper: Get full presence map
+async function getPresenceMap() {
+    const raw = await redis.hGetAll(KEY_PRESENCE);
+    const presence = {};
+    const now = Date.now();
+    const TIMEOUT = 30000; // 30s timeout for presence
+    const toDelete = [];
+
+    for (const [id, val] of Object.entries(raw)) {
+        try {
+            const parsed = JSON.parse(val);
+            if (now - parsed._lastSeen > TIMEOUT) {
+                toDelete.push(id);
+            } else {
+                presence[id] = parsed;
+            }
+        } catch(e) {}
+    }
+
+    if (toDelete.length > 0) {
+        await redis.hDel(KEY_PRESENCE, toDelete);
+    }
+    return presence;
+}
+
+router.get('/api/realtime/init', async (_req, res) => {
+    try {
+        const { user } = await fetchAllData();
+        const roomStateStr = await redis.get(KEY_ROOM_STATE);
+        const roomState = roomStateStr ? JSON.parse(roomStateStr) : {};
+        const presence = await getPresenceMap();
+
+        res.json({
+            clientId: user.id,
+            user: user,
+            roomState,
+            presence,
+            channel: ROOM_CHANNEL
+        });
+    } catch(e) {
+        console.error('Realtime Init Error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/api/realtime/update-room', async (req, res) => {
+    try {
+        const { update } = req.body;
+        // Merge state (shallow merge of top-level keys for simplicity, or deep if needed)
+        // WebSim implies object merging.
+        const currentStr = await redis.get(KEY_ROOM_STATE);
+        let current = currentStr ? JSON.parse(currentStr) : {};
+        
+        // Apply updates (handling nulls to delete)
+        for (const [k, v] of Object.entries(update)) {
+            if (v === null) delete current[k];
+            else current[k] = v;
+        }
+
+        await redis.set(KEY_ROOM_STATE, JSON.stringify(current));
+        
+        // Broadcast
+        await realtime.send(ROOM_CHANNEL, {
+            type: 'roomState',
+            payload: update // Send partial update to clients
+        });
+        
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/api/realtime/update-presence', async (req, res) => {
+    try {
+        const { update, user } = req.body;
+        if (!user || !user.id) return res.status(401).json({ error: 'No user' });
+
+        const presenceKey = user.id;
+        
+        // Get current presence for this user
+        const currentStr = await redis.hGet(KEY_PRESENCE, presenceKey);
+        let current = currentStr ? JSON.parse(currentStr) : {};
+        
+        // Merge
+        const newState = { 
+            ...current, 
+            ...update, 
+            username: user.username,
+            avatarUrl: user.avatar_url,
+            _lastSeen: Date.now()
+        };
+
+        await redis.hSet(KEY_PRESENCE, { [presenceKey]: JSON.stringify(newState) });
+
+        // Broadcast
+        await realtime.send(ROOM_CHANNEL, {
+            type: 'presence',
+            clientId: presenceKey,
+            payload: newState
+        });
+
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/api/realtime/event', async (req, res) => {
+    try {
+        const { event, clientId } = req.body;
+        await realtime.send(ROOM_CHANNEL, {
+            type: 'event',
+            fromClientId: clientId,
+            payload: event
+        });
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/api/realtime/request-update', async (req, res) => {
+    try {
+        const { targetClientId, update, fromClientId } = req.body;
+        await realtime.send(ROOM_CHANNEL, {
+            type: 'requestUpdate',
+            targetClientId,
+            fromClientId,
+            payload: update
+        });
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 router.get('/api/init', async (_req, res) => {
     const data = await fetchAllData();
     res.json(data);
@@ -214,83 +357,6 @@ router.get('/api/json/:key', async (req, res) => {
         console.error('JSON Load Error:', e);
         res.status(500).json({ error: e.message });
     }
-});
-
-// --- Realtime / Multiplayer Routes ---
-router.get('/api/realtime/init', async (_req, res) => {
-    try {
-        const presence = await redis.hGetAll('room:default:presence');
-        const roomState = await redis.hGetAll('room:default:state');
-        
-        // Parse JSON values
-        const parsedPresence = {};
-        for (const [k, v] of Object.entries(presence)) parsedPresence[k] = JSON.parse(v);
-        
-        const parsedState = {};
-        for (const [k, v] of Object.entries(roomState)) parsedState[k] = JSON.parse(v);
-
-        res.json({ presence: parsedPresence, roomState: parsedState });
-    } catch(e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-router.post('/api/realtime/update-presence', async (req, res) => {
-    const { clientId, data, user } = req.body;
-    if (!clientId) return res.status(400).json({error: 'Missing clientId'});
-
-    // Save to Redis (with user info for peers list)
-    const presenceData = { ...data, _user: user, _lastSeen: Date.now() };
-    await redis.hSet('room:default:presence', { [clientId]: JSON.stringify(presenceData) });
-    
-    // Broadcast
-    await realtime.send('default', {
-        type: 'presence',
-        clientId,
-        data: presenceData
-    });
-    
-    res.json({ ok: true });
-});
-
-router.post('/api/realtime/update-room-state', async (req, res) => {
-    const { data } = req.body;
-    
-    // Merge/Save to Redis
-    const updates = {};
-    for (const [k, v] of Object.entries(data)) {
-        updates[k] = JSON.stringify(v);
-    }
-    await redis.hSet('room:default:state', updates);
-
-    // Broadcast partial update
-    await realtime.send('default', {
-        type: 'roomState',
-        data
-    });
-    
-    res.json({ ok: true });
-});
-
-router.post('/api/realtime/send', async (req, res) => {
-    const { event, clientId } = req.body;
-    await realtime.send('default', {
-        type: 'event',
-        from: clientId,
-        event
-    });
-    res.json({ ok: true });
-});
-
-router.post('/api/realtime/request-update', async (req, res) => {
-    const { targetId, update, from } = req.body;
-    await realtime.send('default', {
-        type: 'presenceRequest',
-        targetId,
-        update,
-        from
-    });
-    res.json({ ok: true });
 });
 
 // --- Internal Routes (Menu/Triggers) ---

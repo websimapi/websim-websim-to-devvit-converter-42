@@ -50,8 +50,8 @@ export const generateDevvitJson = (slug, entrypoints) => JSON.stringify({
     "entry": "index.cjs"
   },
   "permissions": {
-    "realtime": true,
     "redis": true,
+    "realtime": true,
     "reddit": {
       "enable": true,
       "asUser": ["SUBMIT_POST", "SUBMIT_COMMENT"]
@@ -99,8 +99,7 @@ export default defineConfig({
       'react/jsx-dev-runtime': '/jsx-dev-proxy.js',
       'react/jsx-runtime': 'react/jsx-runtime',
       'remotion': 'remotion',
-      'websim': '/websim_package.js',
-      '@protobufjs/inquire': './protobuf-inquire-stub.js'
+      'websim': '/websim_package.js'
     },
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     // Ensure we prioritize browser builds
@@ -120,9 +119,6 @@ export default defineConfig({
     sourcemap: false, // Fix: Disable source maps to ensure CSP compliance (no eval)
     // Increase the chunk size warning limit to 1000 KB to reduce noise
     chunkSizeWarningLimit: 1000,
-    commonjsOptions: {
-      ignore: ['@protobufjs/inquire']
-    },
     rollupOptions: {
       ${Object.keys(inputs).length > 0 ? `input: ${JSON.stringify(inputs)},` : ''}
       output: {
@@ -154,15 +150,9 @@ export default defineConfig({
     "process.platform": JSON.stringify("browser"),
     // Remotion specific flags if needed
     "process.env.REMOTION_ENV": JSON.stringify("production"),
-    // Prevent libraries from using "new Function('return this')" for global detection
-    "global": "globalThis",
   },
   optimizeDeps: {
-    include: [
-        '@devvit/web/client',
-        ${hasReact ? "'react', 'react-dom', 'react/jsx-runtime'" : ""}, 
-        ${hasRemotion ? "'remotion', '@remotion/player'" : ""}
-    ].filter(Boolean)
+    include: [${hasReact ? "'react', 'react-dom', 'react/jsx-runtime'" : ""}, ${hasRemotion ? "'remotion', '@remotion/player'" : ""}]
   }
 });
 `;

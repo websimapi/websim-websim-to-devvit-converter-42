@@ -1,9 +1,3 @@
-export const protobufInquireStub = `
-export default function inquire(moduleName) {
-  return null;
-};
-`;
-
 export const websimStubsJs = `
 // [WebSim] API Stubs - Global Script
 (function() {
